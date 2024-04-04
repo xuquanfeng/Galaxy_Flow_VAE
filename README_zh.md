@@ -1,120 +1,50 @@
 Galaxy_Flow_VAE
 ========================
-English | [简体中文](README_zh.md)
 
-The ``Galaxy_Flow_VAE`` can be installed by the PyPI and pip:
+[English](README.md) | 简体中文
 
-How to use ``Galaxy_Flow_VAE``
-========================
+此工作的目的是联合``Flow``和``VAE``建立一个能够从物理参数到生成干净星系图像的基本工具，且在此基本工具上可以添加各种巡天计划的噪声和``PSF``为各种特性巡天计划的数据提供更接近真实的星系图像模拟数据。
 
-The ``Galaxy_Flow_VAE`` can be installed by the PyPI and pip:
+此任务主要分为两个部分：从大量的数据基础上，通过数据驱动用``VAE``无监督的提取星系图像形态特征；通过``Flow``对物理参数和提取隐变量之间构建一个合理的双射模型，于此方法用物理参数对星系图像进行生成。
 
-Galaxy_VAE
-=======
+本项目对以上方法进行多种探究，细节如下。
 
-English | [简体中文](README_zh.md)
-
-The aim of this work is the unsupervised extraction of galaxy image morphological features, which is divided into two main parts.
-
-- **Part I**
-
-  Firstly, the latent variables are extracted from the high-dimensional galaxy images, and the latent variable dimensions are the only super parameters in the network structure when the model structure is determined.
-
-  After analytically finding a good latent variable dimension, the latent variables of many galaxy images are obtained to constitute the latent variable space.
-
-  Explore the nature of the latent variable space. Explore in terms of dimensionality reduction visualization of latent spaces, classification of latent spaces and outlier analysis.
-- **Part II**
-
-  Method: Domain adaptation
-
-  Theory: The transfer of DECaLS survey to non-DECaLS survey using domain adaptation to enable applications between different sky survey.
-
-  Goal: The model trained by DECaLS is used to extract morphological features from other surveys, and the domain adaptation training performs denoising on other surveys, so that the network trained in the first part can be better applied to other surveys to extract morphological features.
-
-
-## Requirements
--  numpy
--  pandas
+## 环境配置要求
+### main
 -  torch>=1.8.1
 -  torchvision>=0.8.0
 -  cudatoolkit>=0.7.1
--  scikit-learn>=1.0.2
--  matplotlib>=1.0.2
+-  itertools
+-  nflows
+
+### Other
 -  warnings
 -  tqdm
+-  os
+-  h5py
 -  astropy
--  pyarrow
+-  matplotlib>=1.0.2
+-  argparse
 -  datetime
 -  random
+-  numpy
+-  pandas
 
-# Part I ``VAE``
-## Datasets
-`DECaLS`: Based on the data in this article [(paper)](https://doi.org/10.1093/mnras/stab2093), the shape size `3×256×256` was filtered, while the selection was made with a threshold value afterwards.
+``Galaxy_Flow_VAE``的细节
+========================
 
-Generate the `train.txt` needed for training with the following command:
-```
-python make_datatxt.py
-```
-## Usage
-### Training
-Train the galaxy images in `train.txt` directly with the following command.
-```
-python Galaxy_VAE_n.py
-```
-The model structure is as follows:
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/outline/VAE_NN.png" width="600">
+# 第一部分 ``VAE``
+## 数据
+本工作使用了`DECaLS`项目发布的`DR9`数据，从[公开网站](https://www.legacysurvey.org/dr9/description/)中下载了`g,r,z`三个波段的星系图像数据。
 
-You can access it by clicking on 
-[Github-models](https://github.com/xuquanfeng/Galaxy_VAE/blob/master/VAE_model/models.py)
-.
-### Analysis of latent variables
-- `analysis/decals_select.py`: The catalog filters images of galaxies with appropriate thresholds.
-- `analysis/decals_match.py`: The filtered galaxies are aligned with the galaxy images in DECaLSE and the index is saved.
-- `analysis/decals_take.py`: The corresponding latent variable features are proposed according to the above index.
-- `analysis/decals_visualization.py`: Reduced dimensional visualization of the latent variable features of the corresponding category.
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/outline/all.jpg" width="600">
+下载的星系图像数据（图像大小基本在`1×152×152`，三波段叠加成三通道图像），而后采用`sextractor`提取得到物理参数。
 
-- `analysis/decals_outliner.py`: Screening outlier points.
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/outline/lqd.jpg" width="600">
+最后用`create_dataset.ipynb`保存星系图像和物理参数到`h5`文件。
 
-### Analysis of outliers
+在`my_dataset.py`中读取对应的`h5`文件，并且裁剪其中`3×182×128`大小来训练。
 
-- `outliers/visualization.ipynb`: The model effects are viewed by reconstructing different hidden variable dimensions.
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/outline/xiang.jpg" width="600">
-
-- `outliers/outline.ipynb`: The same galaxy images obtained by different surveys are visualized by sorting the distances between the latent variables obtained by VAE.
-
-The morphological identification of the same galaxy varies due to the effects of observing bands, telescopes and PSFs in different sky survey programs.
-- `like`
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/transfer/in_out_like.jpg" width="800">
-
-- `dislike`
-<img src="https://github.com/xuquanfeng/Galaxy_VAE/blob/master/transfer/in_out_dislike.jpg" width="800">
-
-# Part II ``Domain Adaptation``
-
-The aim is to overcome the above problem of noise effects in different sky surveys.
-The code content is specified in the `tansfer` folder.
-- `tansfer/dataset_result.ipynb`: The catalogs of two different surveys were aligned and filtered to produce a dataset of aligned images.
-- `tansfer/no_tf.ipynb`: The un-transfer training results are obtained.
-- `tansfer/transfer_learn.ipynb`: The transfer training results are obtained.
-- `tansfer/select_overlap.py`: Obtain labels for overlapping sky areas through thresholds.
-- `tansfer/RF_class_accuracy.ipynb`: Calculate the accuracy of each feature before and after domain adaption under different sky survey.
-
-The following table shows the accuracy of each feature before and after the VAE domain adaptation under different sky survey:
-
-| Question        | Num. of<br/>types | Total<br/>Count | Before DA<br/>DECaLS    | Before DA<br/>BASS+MzLS | After DA<br/>DECaLS      | After DA<br/>BASS+MzLS         |
-|-----------------|---------|-------|---------------|-----------|---------------|-----------------|
-| How round       | 3       | 625   | 76.59\%       | 74.47 \%  | **82.45 \%**  | 77.66 \%        |
-| Edge-on         | 2       | 1024  | 88.60 \%      | 87.62 \%  | **90.23 \%**  | 89.25 \%        |
-| Bar             | 2       | 503   | **96.69 \%**  | 92.72 \%  | 96.03 \%      | 94.70 \%        |
-| Have Arm        | 2       | 784   | 83.40 \%      | 80.43 \%  | 82.55 \%      | **84.68 \%**    |
-| Arm Tightness   | 3       | 225   | 61.76 \%      | 66.18 \%  | 67.65 \%      | **69.12 \%**    |
-| Bulge Size      | 3       | 285   | 73.26 \%      | 70.93 \%  | **76.74 \%**  | 74.42 \%        |
-| Merger          | 2       | 1135  | 97.95\%       | 97.65 \%  | 97.95 \%      | **98.53 \%**    |
-
-## Citation
-
+## 模型结构
+本项工作沿用了之前此工作的``VAE``模型。
 ```
 @article{10.1093/mnras/stad3181,
     author = {Xu, Quanfeng and Shen, Shiyin and de Souza, Rafael S and Chen, Mi and Ye, Renhao and She, Yumei and Chen, Zhu and Ishida, Emille E O and Krone-Martins, Alberto and Durgesh, Rupesh},
@@ -129,4 +59,31 @@ The following table shows the accuracy of each feature before and after the VAE 
     doi = {10.1093/mnras/stad3181},
     url = {https://doi.org/10.1093/mnras/stad3181},
 }
+```
+并且在此基础上，进行了微调模型，其中修改了一些``ReLU``变成``ELU``激活函数，使得模型预测星系图像数量级更合理，而非自然图像的``0-255``或者``0-1``的数量级限制。
+### 训练
+用以下命令直接训练`h5`文件中的星系图像。（其中`ssim.py`文件，能够计算生成图像和真实图像之间的差距。）
+```
+python train_vae.py
+```
+其中``--data_path``参数需要被自行定义。
+您可以通过单击访问它
+[Github-models](https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/conv_vae.py)
+
+# 第二部分 ``Flow``
+
+旨在连接物理参数于隐变量向量的双射，将`VAE`和`Flow`进行连接。
+## 分开训练
+- `train_vae.py`: 第一部分的训练代码；
+- `predicts_vae.py`: 对以上`VAE`模型，进行星系图像的预测。
+- `train_flow.py`: 固定好训练完后能够提取星系形态的`VAE`模型，再训练`Flow`进行映射。
+- `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
+## 合并训练
+- `train_fvae.py`: 同时训练`VAE`和`Flow`的模型，得到两个模型互相动态优化的结果。
+- `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
+# 引用
+如果引用我们的工作，请使用以下信息：
+If you want to cite qrpca, please use the following citations.
+```
+Waiting accepted.
 ```
