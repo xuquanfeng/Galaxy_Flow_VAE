@@ -67,7 +67,8 @@ Galaxy_Flow_VAE
 python train_vae.py
 ```
 其中``--data_path``参数需要被自行定义。
-您可以通过单击访问它
+
+您可以通过单击访问网络结构：
 [Github-models](https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/conv_vae.py)
 
 # 第二部分 ``Flow``
