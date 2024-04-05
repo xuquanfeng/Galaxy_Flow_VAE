@@ -11,7 +11,6 @@ from tqdm import tqdm
 from ssim import ssim
 
 from my_dataset import HDF5Dataset, HDF5_Dataset, arcsinh_rgb
-# from flow_conv_vae import VAE
 from conv_vae import VAE
 import numpy as np
 import pandas as pd
