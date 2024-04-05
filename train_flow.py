@@ -1,18 +1,16 @@
 import os
 import argparse
 
-import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
 import torchvision.utils as utils
 
-from torchvision import transforms
 from tqdm import tqdm
 
 from my_dataset import HDF5Dataset
-from flow_conv_vae import VAE
+from conv_vae import VAE
 import numpy as np
 
 from nflows.flows.base import Flow
@@ -44,7 +42,6 @@ def main(args):
     os.makedirs('./weights/', exist_ok=True)
 
     f_vae = VAE(args)
-    # print(f_vae)
     f_vae.to(device)
     weights_dict = torch.load("./weights/model_train_vae_best.pth", map_location=device)
     f_vae.load_state_dict(weights_dict, strict=False)
@@ -75,7 +72,6 @@ def main(args):
         losss = []
         dataloader = tqdm(dataloader)
         for i, (imgs, labels) in enumerate(dataloader):
-            batch_size = imgs.shape[0]
             # Configure input
             imgs = Variable(imgs.type(FloatTensor).to(device))
             labels = Variable(labels.type(FloatTensor).to(device))
@@ -86,20 +82,13 @@ def main(args):
             mean, log_var = f_vae.encode(imgs)
             x_hat, _ = f_vae.transform(mean, log_var)
 
-            # x_hat = torch.log10(x_hat-x_hat.min()+0.001)
-            # labels = torch.log10(labels-labels.min()+0.001)
-            # print('x_hat size', x_hat.size())
-            # print('labels size', labels.size())
-
             x_hat = torch.tensor(x_hat, dtype=torch.float32).to(device)
             labels = torch.tensor(labels, dtype=torch.float32).to(device)
             optimizer.zero_grad()
             loss = -flow.log_prob(inputs=x_hat, context=labels).mean()
             loss.backward()
             optimizer.step()
-            # print(loss.item())
-
-            # sys.exit()
+            
             losss.append(loss.item())
             f_loss1 = np.mean(losss)
             with torch.no_grad():
@@ -115,8 +104,6 @@ def main(args):
             save_loss = f_loss1
             torch.save(flow.state_dict(), "./weights/model_train_flow_vae_best.pth")
             print('Save best models in {} !'.format(epoch))
-        # if epoch%10==9:
-        #     torch.save(f_vae.state_dict(), "./weights/model_fvae_{}.pth".format(epoch))
 
 
 if __name__ == '__main__':
@@ -140,11 +127,10 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck', type=int, default=0, help='whether to use bottleneck in residual blocks.')
     parser.add_argument('--weight_norm', type=int, default=0, help='whether to apply weight normalization.')
     parser.add_argument('--flow', type=str, default='none', help='type of flow to use.')
-    # parser.add_argument('--flow', type=str, default='planar', help='type of flow to use.')
     parser.add_argument('--length', type=int, default=8, help='number of steps in the flow.')
     parser.add_argument('--sample_size', type=int, default=32, help='number of images to generate')
     parser.add_argument("--sample_interval", type=int, default=100, help="interval between image sampling")
-    parser.add_argument('--device', default='cuda:1', help='device id (i.e. 0 or 0,1 or cpu)')
+    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
     opt = parser.parse_args()
 
     main(opt)

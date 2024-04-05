@@ -2,7 +2,6 @@ import os
 import argparse
 
 from torchvision.utils import save_image
-import torchvision.transforms as transforms
 from torch.autograd import Variable
 import torch
 import torchvision.utils as utils
@@ -13,39 +12,26 @@ from ssim import ssim
 from my_dataset import HDF5Dataset, HDF5_Dataset, arcsinh_rgb
 from conv_vae import VAE
 import numpy as np
-import pandas as pd
-# from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 
 import warnings
 warnings.filterwarnings('ignore')
 
 def main(args):
-    project_name = ''
+    project_name = '1'
     save_model_name = 'model_train_vae_best'
-    # df = pd.DataFrame(columns=['time','epoch','Loss','ssim'])
 
     os.makedirs('./train_process/', exist_ok=True)
-    # time1 = 'vae' + project_name + "%s"%datetime.now()
-    # df.to_csv("./train_process/" + time1 + ".csv",index=False) #路径可以根据需要更改
+    os.makedirs('./reconstruction'+ project_name +'/', exist_ok=True)
+    os.makedirs('./samples'+ project_name +'/', exist_ok=True)
+    os.makedirs('./weights/', exist_ok=True)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     tb_writer = SummaryWriter('./train_process/VAE')
-    os.makedirs('./weights/', exist_ok=True)
 
     f_vae = VAE(args)
-    # print(f_vae)
     f_vae.to(device)
-
-    data_transform = {
-        "train": transforms.Compose([#transforms.RandomHorizontalFlip(p=0.5),
-                                     transforms.Resize(args.img_size),
-                                     transforms.ToTensor()]),
-                                    #  transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        "val": transforms.Compose([transforms.Resize(args.img_size),
-                                   transforms.ToTensor()])}
     
     # 实例化训练数据集
-    # train_dataset = HDF5_Dataset(args.data_path, transform=data_transform["train"])
     train_dataset = HDF5Dataset(args.data_path)
     print('Using {} images to train'.format(len(train_dataset)))
 
@@ -67,10 +53,8 @@ def main(args):
         ssimm = []
         dataloader = tqdm(dataloader)
         for i, (imgs, labels) in enumerate(dataloader):
-            batch_size = imgs.shape[0]
             # Configure input
             imgs = Variable(imgs.type(FloatTensor).to(device))
-            # print(imgs.size())
             labels = Variable(labels.type(FloatTensor).to(device))
 
             # -----------------
@@ -81,12 +65,11 @@ def main(args):
             if args.weight_norm:
                 scale_reg = 5e-5    # L2 regularization strength
                 loss = loss + scale_reg * weight_scale
-                # print(weight_scale)
             ssim_val = ssim(imgs, x_hat, data_range=1, size_average=True)
 
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
             losss.append(loss.item())
             ssimm.append(ssim_val.item())
@@ -96,26 +79,17 @@ def main(args):
         
         if epoch % 10 == 0:
             samples = f_vae.sample(args.sample_size)
-            # print(samples.shape)
             samples = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  samples]).permute(0, 3, 1, 2)
             x_hat = x_hat[0:args.sample_size,:,:,:]
             imgs = imgs[0:args.sample_size,:,:,:]
             reconst = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  x_hat]).permute(0, 3, 1, 2)
             imgs = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  imgs]).permute(0, 3, 1, 2)
-            # print(reconst.shape)
-            # print(imgs.shape)
+
             orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             comparison = torch.cat(
                 (orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
     
-            # reconst = x_hat
-            # orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
-            # reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size)
-            # comparison = torch.cat(
-            #     (orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
-            os.makedirs('./reconstruction'+ project_name +'/', exist_ok=True)
-            os.makedirs('./samples'+ project_name +'/', exist_ok=True)
             utils.save_image(utils.make_grid(comparison),
                 './reconstruction'+ project_name +'/' + 'recon_%d.png' % epoch, normalize=False)
             utils.save_image(utils.make_grid(samples),
@@ -127,10 +101,6 @@ def main(args):
             save_loss = f_loss1
             torch.save(f_vae.state_dict(), "./weights/" + save_model_name + ".pth")
             print('Save best models in {} !'.format(epoch))
-        # time2 = "%s"%datetime.now()
-        # context = [time2,epoch,f_loss1,ssim1]
-        # context = pd.DataFrame([context])
-        # context.to_csv("./train_process/" + time1 + ".csv",mode='a',header=False,index=False)
         tags = ["learning_rate", "vae_loss", "ssim"]
         tb_writer.add_scalar(tags[0], optimizer.param_groups[0]["lr"], epoch)
         tb_writer.add_scalar(tags[1], f_loss1, epoch)
@@ -157,7 +127,6 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck', type=int, default=0, help='whether to use bottleneck in residual blocks.')
     parser.add_argument('--weight_norm', type=int, default=0, help='whether to apply weight normalization.')
     parser.add_argument('--flow', type=str, default='none', help='type of flow to use.')
-    # parser.add_argument('--flow', type=str, default='planar', help='type of flow to use.')
     parser.add_argument('--length', type=int, default=8, help='number of steps in the flow.')
     parser.add_argument('--sample_size', type=int, default=32, help='number of images to generate')
     parser.add_argument("--sample_interval", type=int, default=100, help="interval between image sampling")

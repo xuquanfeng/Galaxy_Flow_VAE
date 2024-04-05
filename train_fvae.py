@@ -2,7 +2,6 @@ import os
 import argparse
 
 from torchvision.utils import save_image
-import torchvision.transforms as transforms
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
@@ -13,6 +12,7 @@ from tqdm import tqdm
 
 from my_dataset import HDF5Dataset, HDF5_Dataset, arcsinh_rgb
 from ssim import ssim
+# from flow_conv_vae import VAE
 from conv_vae import VAE
 import numpy as np
 import pandas as pd
@@ -46,13 +46,12 @@ def main(args):
     project_name = '_flow'
     save_model_name = 'model_train_fvae_vae_best'
     save_model_name1 = 'model_train_fvae_flow_best'
-    # df = pd.DataFrame(columns=['time','epoch','VAE Loss','Flow Loss','ssim'])
 
     os.makedirs('./train_process/', exist_ok=True)
-    # time1 = 'vae' + project_name + "%s"%datetime.now()
-    # df.to_csv("./train_process/" + time1 + ".csv",index=False) #路径可以根据需要更改
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    os.makedirs('./reconstruction'+ project_name +'/', exist_ok=True)
+    os.makedirs('./samples'+ project_name +'/', exist_ok=True)
     os.makedirs('./weights/', exist_ok=True)
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     tb_writer = SummaryWriter('./train_process/'+project_name[1:])
     pre_train_vae_epoch = 10
     # -----------------
@@ -61,7 +60,6 @@ def main(args):
 
     #  Bulild VAE
     f_vae = VAE(args)
-    # print(f_vae)
     f_vae.to(device)
     #  Bulild Flow
     flow = Flow_model(num_layers = 10, input_dim = args.latent_dim, output_dim = args.n_classes)
@@ -94,10 +92,8 @@ def main(args):
             optimizer = torch.optim.Adam(itertools.chain(f_vae.parameters(), flow.parameters()), lr=opt.lr, betas=(opt.b1, opt.b2))
         dataloader = tqdm(dataloader)
         for i, (imgs, labels) in enumerate(dataloader):
-            batch_size = imgs.shape[0]
             # Configure input
             imgs = Variable(imgs.type(FloatTensor).to(device))
-            # print(imgs.size())
             labels = Variable(labels.type(FloatTensor).to(device))
 
             # -----------------
@@ -108,7 +104,6 @@ def main(args):
             if args.weight_norm:
                 scale_reg = 5e-5    # L2 regularization strength
                 loss1 = loss1 + scale_reg * weight_scale
-                # print(weight_scale)
             if epoch > pre_train_vae_epoch:
                 mean, log_var = f_vae.encode(imgs)
                 z_hat, _ = f_vae.transform(mean, log_var)
@@ -122,12 +117,11 @@ def main(args):
                 loss_total = loss1
                 loss2 = loss1 - loss1
 
-            # ssim_val = ssim(imgs.cpu().detach().numpy(), x_hat.cpu().detach().numpy(), data_range=1, size_average=True)
             ssim_val = ssim(imgs, x_hat, data_range=1, size_average=True)
 
+            optimizer.zero_grad()
             loss_total.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
             losss.append(loss_total.item())
             ssimm.append(ssim_val.item())
@@ -142,26 +136,18 @@ def main(args):
 
         if epoch % 10 == 0:
             samples = f_vae.sample(args.sample_size)
-            # print(samples.shape)
+            
             samples = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  samples]).permute(0, 3, 1, 2)
             x_hat = x_hat[0:args.sample_size,:,:,:]
             imgs = imgs[0:args.sample_size,:,:,:]
             reconst = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  x_hat]).permute(0, 3, 1, 2)
             imgs = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  imgs]).permute(0, 3, 1, 2)
-            # print(reconst.shape)
-            # print(imgs.shape)
+
             orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             comparison = torch.cat(
                 (orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
-    
-            # reconst = x_hat
-            # orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
-            # reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size)
-            # comparison = torch.cat(
-            #     (orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
-            os.makedirs('./reconstruction'+ project_name +'/', exist_ok=True)
-            os.makedirs('./samples'+ project_name +'/', exist_ok=True)
+
             utils.save_image(utils.make_grid(comparison),
                 './reconstruction'+ project_name +'/' + 'recon_%d.png' % epoch, normalize=False)
             utils.save_image(utils.make_grid(samples),
@@ -174,10 +160,6 @@ def main(args):
             torch.save(f_vae.state_dict(), "./weights/" + save_model_name + ".pth")
             torch.save(flow.state_dict(), "./weights/" + save_model_name1 + ".pth")
             print('Save best models in {} !'.format(epoch))
-        # time2 = "%s"%datetime.now()
-        # context = [time2,epoch,f_loss1-flow1,flow1,ssim1]
-        # context = pd.DataFrame([context])
-        # context.to_csv("./train_process/" + time1 + ".csv",mode='a',header=False,index=False)
         tags = ["learning_rate", "vae_loss", "flow_loss", "ssim", "learning_rate"]
         tb_writer.add_scalar(tags[0], optimizer.param_groups[0]["lr"], epoch)
         tb_writer.add_scalar(tags[1], f_loss1-flow1, epoch)
@@ -205,7 +187,6 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck', type=int, default=0, help='whether to use bottleneck in residual blocks.')
     parser.add_argument('--weight_norm', type=int, default=0, help='whether to apply weight normalization.')
     parser.add_argument('--flow', type=str, default='none', help='type of flow to use.')
-    # parser.add_argument('--flow', type=str, default='planar', help='type of flow to use.')
     parser.add_argument('--length', type=int, default=8, help='number of steps in the flow.')
     parser.add_argument('--sample_size', type=int, default=32, help='number of images to generate')
     parser.add_argument("--sample_interval", type=int, default=100, help="interval between image sampling")

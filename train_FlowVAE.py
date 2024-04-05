@@ -2,7 +2,6 @@ import os
 import argparse
 
 from torchvision.utils import save_image
-import torchvision.transforms as transforms
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
@@ -46,8 +45,10 @@ def main(args):
     save_model_name1 = 'model_train_Fvae_flow_best'
 
     os.makedirs('./train_process/', exist_ok=True)
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    os.makedirs('./reconstruction'+ project_name +'/', exist_ok=True)
+    os.makedirs('./samples'+ project_name +'/', exist_ok=True)
     os.makedirs('./weights/', exist_ok=True)
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     tb_writer = SummaryWriter('./train_process/'+project_name[1:])
     pre_train_vae_epoch = 10
     # -----------------
@@ -56,7 +57,6 @@ def main(args):
 
     #  Bulild VAE
     f_vae = VAE(args)
-    # print(f_vae)
     f_vae.to(device)
     #  Bulild Flow
     flow = Flow_model(num_layers = 10, input_dim = args.latent_dim, output_dim = args.n_classes)
@@ -89,10 +89,8 @@ def main(args):
             optimizer = torch.optim.Adam(itertools.chain(f_vae.parameters(), flow.parameters()), lr=opt.lr, betas=(opt.b1, opt.b2))
         dataloader = tqdm(dataloader)
         for i, (imgs, labels) in enumerate(dataloader):
-            batch_size = imgs.shape[0]
             # Configure input
             imgs = Variable(imgs.type(FloatTensor).to(device))
-            # print(imgs.size())
             labels = Variable(labels.type(FloatTensor).to(device))
 
             # -----------------
@@ -123,9 +121,9 @@ def main(args):
 
             ssim_val = ssim(imgs, x_hat, data_range=1, size_average=True)
 
+            optimizer.zero_grad()
             loss_total.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
             losss.append(loss_total.item())
             ssimm.append(ssim_val.item())
@@ -140,14 +138,12 @@ def main(args):
 
         if epoch % 10 == 0:
             samples = f_vae.sample(args.sample_size)
-            # print(samples.shape)
             samples = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  samples]).permute(0, 3, 1, 2)
             x_hat = x_hat[0:args.sample_size,:,:,:]
             imgs = imgs[0:args.sample_size,:,:,:]
             reconst = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  x_hat]).permute(0, 3, 1, 2)
             imgs = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  imgs]).permute(0, 3, 1, 2)
-            # print(reconst.shape)
-            # print(imgs.shape)
+
             orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
             comparison = torch.cat(
@@ -196,7 +192,6 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck', type=int, default=0, help='whether to use bottleneck in residual blocks.')
     parser.add_argument('--weight_norm', type=int, default=0, help='whether to apply weight normalization.')
     parser.add_argument('--flow', type=str, default='none', help='type of flow to use.')
-    # parser.add_argument('--flow', type=str, default='planar', help='type of flow to use.')
     parser.add_argument('--length', type=int, default=8, help='number of steps in the flow.')
     parser.add_argument('--sample_size', type=int, default=32, help='number of images to generate')
     parser.add_argument("--sample_interval", type=int, default=100, help="interval between image sampling")
