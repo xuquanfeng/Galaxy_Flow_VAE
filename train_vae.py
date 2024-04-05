@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def main(args):
-    project_name = '1'
+    project_name = ''
     save_model_name = 'model_train_vae_best'
 
     os.makedirs('./train_process/', exist_ok=True)
