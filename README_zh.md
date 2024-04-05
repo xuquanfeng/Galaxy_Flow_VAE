@@ -86,7 +86,6 @@ python train_vae.py
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
 # 引用
 如果引用我们的工作，请使用以下信息：
-If you want to cite qrpca, please use the following citations.
 ```
 Waiting accepted.
 ```
