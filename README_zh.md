@@ -81,7 +81,8 @@ python train_vae.py
 - `train_flow.py`: 固定好训练完后能够提取星系形态的`VAE`模型，再训练`Flow`进行映射。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
 ## 合并训练
-- `train_fvae.py`: 同时训练`VAE`和`Flow`的模型，得到两个模型互相动态优化的结果。
+- `train_fvae.py`: 同时训练`VAE`和`Flow`的模型，用编码器得到隐变量而不用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
+- `train_FlowVAE.py`: 同时训练`VAE`和`Flow`的模型，用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
 # 引用
 如果引用我们的工作，请使用以下信息：
