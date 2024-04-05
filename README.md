@@ -9,14 +9,14 @@ The task is divided into two parts: a data-driven unsupervised extraction of mor
 This project explores the above methods in a variety of ways, as detailed below.
 
 ## Requirements
-### main
+### Main
 -  torch>=1.8.1
 -  torchvision>=0.8.0
 -  cudatoolkit>=0.7.1
 -  itertools
 -  nflows
 
-### Other
+### Minor
 -  warnings
 -  tensorboard
 -  tqdm
