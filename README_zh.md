@@ -10,15 +10,16 @@ Galaxy_Flow_VAE
 本项目对以上方法进行多种探究，细节如下。
 
 ## 环境配置要求
-### main
+### 主要引用的库
 -  torch>=1.8.1
 -  torchvision>=0.8.0
 -  cudatoolkit>=0.7.1
 -  itertools
 -  nflows
 
-### Other
+### 次要引用的库
 -  warnings
+-  tensorboard
 -  tqdm
 -  os
 -  h5py
