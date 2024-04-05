@@ -13,11 +13,11 @@ from tqdm import tqdm
 
 from my_dataset import HDF5Dataset, HDF5_Dataset, arcsinh_rgb
 from ssim import ssim
-# from flow_conv_vae import VAE
 from conv_vae import VAE
 import numpy as np
 import pandas as pd
-from datetime import datetime
+# from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 from nflows.flows.base import Flow
 from nflows.distributions.normal import ConditionalDiagonalNormal
@@ -46,13 +46,14 @@ def main(args):
     project_name = '_flow'
     save_model_name = 'model_train_fvae_vae_best'
     save_model_name1 = 'model_train_fvae_flow_best'
-    df = pd.DataFrame(columns=['time','epoch','VAE Loss','Flow Loss','ssim'])
+    # df = pd.DataFrame(columns=['time','epoch','VAE Loss','Flow Loss','ssim'])
 
     os.makedirs('./train_process/', exist_ok=True)
-    time1 = 'vae' + project_name + "%s"%datetime.now()
-    df.to_csv("./train_process/" + time1 + ".csv",index=False) #路径可以根据需要更改
+    # time1 = 'vae' + project_name + "%s"%datetime.now()
+    # df.to_csv("./train_process/" + time1 + ".csv",index=False) #路径可以根据需要更改
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     os.makedirs('./weights/', exist_ok=True)
+    tb_writer = SummaryWriter('./train_process/'+project_name[1:])
     pre_train_vae_epoch = 10
     # -----------------
     #  Bulild Flow-VAE
@@ -173,10 +174,15 @@ def main(args):
             torch.save(f_vae.state_dict(), "./weights/" + save_model_name + ".pth")
             torch.save(flow.state_dict(), "./weights/" + save_model_name1 + ".pth")
             print('Save best models in {} !'.format(epoch))
-        time2 = "%s"%datetime.now()
-        context = [time2,epoch,f_loss1-flow1,flow1,ssim1]
-        context = pd.DataFrame([context])
-        context.to_csv("./train_process/" + time1 + ".csv",mode='a',header=False,index=False)
+        # time2 = "%s"%datetime.now()
+        # context = [time2,epoch,f_loss1-flow1,flow1,ssim1]
+        # context = pd.DataFrame([context])
+        # context.to_csv("./train_process/" + time1 + ".csv",mode='a',header=False,index=False)
+        tags = ["learning_rate", "vae_loss", "flow_loss", "ssim", "learning_rate"]
+        tb_writer.add_scalar(tags[0], optimizer.param_groups[0]["lr"], epoch)
+        tb_writer.add_scalar(tags[1], f_loss1-flow1, epoch)
+        tb_writer.add_scalar(tags[2], flow1, epoch)
+        tb_writer.add_scalar(tags[3], ssim1, epoch)
 
 if __name__ == '__main__':
 
