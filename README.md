@@ -18,6 +18,7 @@ This project explores the above methods in a variety of ways, as detailed below.
 
 ### Other
 -  warnings
+-  tensorboard
 -  tqdm
 -  os
 -  h5py
