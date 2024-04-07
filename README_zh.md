@@ -36,7 +36,7 @@ Galaxy_Flow_VAE
 
 # 第一部分 ``VAE``
 ## 数据
-本工作使用了`DECaLS`项目发布的`DR9`数据，从[公开网站](https://www.legacysurvey.org/dr9/description/)中下载了`g,r,z`三个波段的星系图像数据。
+本工作使用了`DECaLS`项目发布的`DR9`数据（挑选了大概230k个`r`波段星等小于17.77的星系），从[公开网站](https://www.legacysurvey.org/dr9/description/)中下载了`g,r,z`三个波段的星系图像数据。
 
 下载的星系图像数据（图像大小基本在`1×152×152`，三波段叠加成三通道图像），而后采用`sextractor`提取得到物理参数。
 
