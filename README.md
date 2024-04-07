@@ -35,7 +35,7 @@ Details of ``Galaxy_Flow_VAE``
 
 # Part I ``VAE``
 ## Datasets
-This work uses the `DR9` data released by the `DECaLS` project, and image data of galaxies in the `g, r, z` bands were downloaded from publicly [available websites](https://www.legacysurvey.org/dr9/description/).
+This work uses the `DR9` data released by the `DECaLS` project(Selected approximately 230k galaxies with magnitudes less than 17.77 in the 'r' band), and image data of galaxies in the `g, r, z` bands were downloaded from publicly [available websites](https://www.legacysurvey.org/dr9/description/).
 
 The downloaded galaxy image data (image size basically at `1×152×152`, with three bands stacked into a three-channel image), while the physical parameters were obtained by using `sextractor`.
 
