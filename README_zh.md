@@ -93,7 +93,7 @@ python predicts_vae.py
 - `train_FlowVAE.py`: 同时训练`VAE`和`Flow`的模型，用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
 ## 结果
-采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`和`Flow`模型进行预测。
+采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`和`Flow`模型进行预测。（以下图像仅仅采用`Z、SHAPE_E1、SHAPE_E2`三个参数重构而出，物理意义上没有考虑倾角等量所以表现不佳）
 ```
 python predicts_flow.py
 ```
