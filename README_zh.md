@@ -71,6 +71,14 @@ python train_vae.py
 
 您可以通过单击访问网络结构：
 [Github-models](https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/conv_vae.py)
+## 结果
+采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`模型进行预测。
+```
+python predicts_vae.py
+```
+得到结果可视化如下：
+
+<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/reconstruction/recon_190.jpg" width="600">
 
 # 第二部分 ``Flow``
 
@@ -84,6 +92,15 @@ python train_vae.py
 - `train_flow_vae.py`: 同时训练`VAE`和`Flow`的模型，用编码器得到隐变量而不用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `train_FlowVAE.py`: 同时训练`VAE`和`Flow`的模型，用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
+## 结果
+采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`和`Flow`模型进行预测。
+```
+python predicts_flow.py
+```
+得到结果可视化如下：
+
+<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/recon_flow_170.jpg" width="600">
+
 # 引用
 如果引用我们的工作，请使用以下信息：
 ```
