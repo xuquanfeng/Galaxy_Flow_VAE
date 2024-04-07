@@ -78,7 +78,7 @@ python predicts_vae.py
 ```
 得到结果可视化如下：
 
-<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/reconstruction/recon_190.jpg" width="600">
+<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/reconstruction/recon_190.png" width="600">
 
 # 第二部分 ``Flow``
 
@@ -99,7 +99,7 @@ python predicts_flow.py
 ```
 得到结果可视化如下：
 
-<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/recon_flow_170.jpg" width="600">
+<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/recon_flow_170.png" width="600">
 
 # 引用
 如果引用我们的工作，请使用以下信息：
