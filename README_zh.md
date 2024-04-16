@@ -96,7 +96,7 @@ python predicts_vae.py
 
 第二部分是真实星系图像和生成星系图像的颜色定量上的比较，下图展示了真实图像的r-z和生成图像r-z的分布：
 
-<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/result1.png" width="600">
+<img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/result2.png" width="600">
 
 # 第二部分 ``Flow``
 
