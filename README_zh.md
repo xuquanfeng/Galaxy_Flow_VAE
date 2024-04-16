@@ -36,6 +36,7 @@ Galaxy_Flow_VAE
 
 # 第一部分 ``VAE``
 ## 数据
+
 本工作使用了`DECaLS`项目发布的`DR9`数据（挑选了大概230k个`r`波段星等小于17.77的星系），从[公开网站](https://www.legacysurvey.org/dr9/description/)中下载了`g,r,z`三个波段的星系图像数据。
 
 下载的星系图像数据（图像大小基本在`1×152×152`，三波段叠加成三通道图像），而后采用`sextractor`提取得到物理参数。
@@ -62,7 +63,9 @@ Galaxy_Flow_VAE
 }
 ```
 并且在此基础上，进行了微调模型，其中修改了一些``ReLU``变成``ELU``激活函数，使得模型预测星系图像数量级更合理，而非自然图像的``0-255``或者``0-1``的数量级限制。
+
 ### 训练
+
 用以下命令直接训练`h5`文件中的星系图像。（其中`ssim.py`文件，能够计算生成图像和真实图像之间的差距。）
 ```
 python train_vae.py
@@ -71,16 +74,20 @@ python train_vae.py
 
 您可以通过单击访问网络结构：
 [Github-models](https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/conv_vae.py)
+
 ## 结果
+
 采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`模型进行预测。
 ```
 python predicts_vae.py
 ```
 得到结果可视化如下：
-
 <img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/reconstruction/recon_190.png" width="600">
 
 ## 结果分析
+
+用`sextractor_pipe.ipynb`文件进行以下部分的分析。
+
 分析随机选择了256(batch_size)×12(step)个星系图像进行星等和颜色上的统计。
 第一部分是真实星系图像和生成星系图像的星等定量上（使用Sextractor得到的物理量）的比较，下图展示了真实图像和生成图像三个波段之间的星等差分布：
 <img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/result1.png" width="600">
@@ -91,30 +98,38 @@ python predicts_vae.py
 # 第二部分 ``Flow``
 
 旨在连接物理参数于隐变量向量的双射，将`VAE`和`Flow`进行连接。
+
 ## 分开训练
+
 - `train_vae.py`: 第一部分的训练代码；
 - `predicts_vae.py`: 对以上`VAE`模型，进行星系图像的预测。
 - `train_flow.py`: 固定好训练完后能够提取星系形态的`VAE`模型，再训练`Flow`进行映射。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
+
 ## 合并训练
+
 - `train_flow_vae.py`: 同时训练`VAE`和`Flow`的模型，用编码器得到隐变量而不用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `train_FlowVAE.py`: 同时训练`VAE`和`Flow`的模型，用`Flow`生成的隐变量去解码得到星系图像于原图做重构损失，得到两个模型互相动态优化的结果。
 - `predicts_flow.py`: 读取`VAE`和`Flow`的模型，进行星系图像的预测。
+
 ## 结果
 采用以下命令获得`h5`文件中的星系图像，读取训练好的`VAE`和`Flow`模型进行预测。（以下图像仅仅采用`Z、SHAPE_E1、SHAPE_E2`三个参数重构而出，物理意义上没有考虑倾角等量所以表现不佳）
 ```
 python predicts_flow.py
 ```
 得到结果可视化如下：
-
 <img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/result3.png" width="600">
 
 ## 结果分析
+
+用`anaylize_flowvae.ipynb`文件进行以下部分的分析。
 我们随机选择了一个星系图像采用statmorph进行形态上的统计。
 <img src="https://github.com/xuquanfeng/Galaxy_Flow_VAE/blob/master/images/result4.png" width="1000">
+
 此结果中，`FlowVAE`项目并不像`VAE`项目能直接一对一得到形态，但这恰好能解释我们实验仅仅采用`Z、SHAPE_E1、SHAPE_E2`三个参数重构生成的结果（只给进去椭率，而没有倾角）。
 
 # 引用
+
 如果引用我们的工作，请使用以下信息：
 ```
 Waiting accepted.
