@@ -17,6 +17,27 @@ from torch.utils.tensorboard import SummaryWriter
 import warnings
 warnings.filterwarnings('ignore')
 
+def save_images(epoch, f_vae, x_hat, imgs, args, project_name, device, is_best=False):
+    samples = f_vae.sample(args.sample_size)
+    samples = inv_reconstruce(samples)
+    samples = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in samples]).permute(0, 3, 1, 2)
+    x_hat = x_hat[0:args.sample_size, :, :, :]
+    imgs = imgs[0:args.sample_size, :, :, :]
+    reconst = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in x_hat]).permute(0, 3, 1, 2)
+    imgs = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in imgs]).permute(0, 3, 1, 2)
+
+    orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
+    reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
+    comparison = torch.cat((orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
+
+    if is_best:
+        utils.save_image(utils.make_grid(comparison), './reconstruction' + project_name + '/' + 'recon_best.png', normalize=False)
+        utils.save_image(utils.make_grid(samples), './samples' + project_name + '/' + 'sample_best.png', normalize=False)
+        print('Save best models in {} !'.format(epoch))
+    else:
+        utils.save_image(utils.make_grid(comparison), './reconstruction' + project_name + '/' + 'recon_%d.png' % epoch, normalize=False)
+        utils.save_image(utils.make_grid(samples), './samples' + project_name + '/' + 'sample_%d.png' % epoch, normalize=False)
+
 def main(args):
     project_name = ''
     save_model_name = 'model_train_vae_best'
@@ -76,30 +97,15 @@ def main(args):
             f_loss1 = np.mean(losss)
             ssim1 = np.mean(ssimm)
             dataloader.desc = "[Epoch {}/{}] [Batch {}/{}] [VAE loss: {:.3f}] [SSIM: {:.3f}] [Total average_loss: {:.3f}] [average_ssim: {:.3f}]".format(epoch, opt.n_epochs, i, len(dataloader), loss.item(), ssim_val, f_loss1, ssim1)
-        
-        if epoch % 10 == 0:
-            samples = f_vae.sample(args.sample_size)
-            samples = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  samples]).permute(0, 3, 1, 2)
-            x_hat = x_hat[0:args.sample_size,:,:,:]
-            imgs = imgs[0:args.sample_size,:,:,:]
-            reconst = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  x_hat]).permute(0, 3, 1, 2)
-            imgs = torch.tensor([arcsinh_rgb(part.detach().cpu(), ["g", "r", "z"]) for part in  imgs]).permute(0, 3, 1, 2)
 
-            orig = imgs.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
-            reconst = reconst.reshape(1, -1, args.channels, args.img_size, args.img_size).to(device)
-            comparison = torch.cat(
-                (orig, reconst), dim=0).permute(1, 0, 2, 3, 4).reshape(-1, args.channels, args.img_size, args.img_size)
-    
-            utils.save_image(utils.make_grid(comparison),
-                './reconstruction'+ project_name +'/' + 'recon_%d.png' % epoch, normalize=False)
-            utils.save_image(utils.make_grid(samples),
-                './samples'+ project_name +'/' + 'sample_%d.png' % epoch, normalize=False)
-        
+        if epoch % 10 == 0:
+            save_images(epoch, f_vae, x_hat, imgs, args, project_name, device)
         if epoch == 0:
             save_loss = f_loss1
         elif save_loss > f_loss1:
             save_loss = f_loss1
-            torch.save(f_vae.state_dict(), "./weights/" + save_model_name + ".pth")
+            torch.save(f_vae.state_dict(), "./weights/" + save_model_name + '_' + str(args.latent_dim) + ".pth")
+            save_images(epoch, f_vae, x_hat, imgs, args, project_name, device, is_best=True)
             print('Save best models in {} !'.format(epoch))
         tags = ["learning_rate", "vae_loss", "ssim"]
         tb_writer.add_scalar(tags[0], optimizer.param_groups[0]["lr"], epoch)
@@ -111,7 +117,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--batch_size", type=int, default=256, help="size of the batches")
-    parser.add_argument('--data_path', type=str,default="/data/public/renhaoye/MockCSST/dataset/merged.h5")
+    parser.add_argument('--data_path', type=str,default="/data/public/MockCSST/dataset/merged.h5")
     parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.99, help="adam: decay of first order momentum of gradient")
